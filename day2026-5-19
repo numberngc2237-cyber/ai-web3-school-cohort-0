@@ -8,7 +8,7 @@
 - 2.针对在社交 平台部署机器人助手的反馈
     - 社交平台：hermes gateway setup 选择然后按提示继续操作
     - 微信：直接微信机器人封号风险较高，目前没有官方的API对接，可以考虑申请企微小号作为机器人接入。
-    - telegram：卡在获取fatherbot的token，输入/newbot未收到返回信息，推测是网络问题，暂无进展
+    - telegram：卡在获取fatherbot的token，输入/newbot未收到返回信息，推测是网络问题，暂无进展(520更新：已完成部署）
         - telegram的智能体怎么分类，**Hermes 的实现方式：Profile**
             
             同一个 Telegram 机器人对话界面
