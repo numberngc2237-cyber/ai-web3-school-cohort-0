@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI x Web3 边界学习器 | DeepSeek 实时驱动</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fb; margin: 0; padding: 24px;
+            display: flex; justify-content: center; align-items: center; min-height: 100vh;
+        }
+        .card {
+            max-width: 700px; width: 100%; background: white;
+            border-radius: 32px; box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1);
+            padding: 28px 24px 36px;
+        }
+        h1 { font-size: 1.8rem; margin: 0 0 6px 0; display: flex; align-items: center; gap: 10px; }
+        h1 span { background: #0000000c; font-size: 0.8rem; padding: 4px 10px; border-radius: 40px; font-weight: normal; }
+        .live-badge { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; animation: pulse2 2s infinite; }
+        @keyframes pulse2 { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+        .sub { color: #4b5563; border-left: 3px solid #8b5cf6; padding-left: 14px; margin: 12px 0 24px 0; font-size: 0.9rem; }
+        .input-group { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+        input { flex: 3; padding: 14px 18px; font-size: 1rem; border: 1px solid #e2e8f0; border-radius: 60px; background: #fefefe; transition: 0.2s; font-family: inherit; }
+        input:focus { outline: none; border-color: #8b5cf6; box-shadow: 0 0 0 3px #8b5cf630; }
+        button { background: #1e293b; color: white; border: none; padding: 0 28px; border-radius: 60px; font-weight: 600; cursor: pointer; transition: 0.15s; font-size: 0.95rem; font-family: inherit; white-space: nowrap; }
+        button:hover { background: #0f172a; transform: scale(0.97); }
+        button:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+        .output { background: #f8fafc; border-radius: 28px; padding: 20px; border: 1px solid #eef2ff; margin: 20px 0; min-height: 80px; }
+        .section { margin-bottom: 20px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 12px; }
+        .section:last-child { border-bottom: none; }
+        .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; color: #475569; margin-bottom: 8px; }
+        .value { font-size: 1rem; line-height: 1.6; word-break: break-word; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 40px; font-size: 0.8rem; font-weight: 500; }
+        .badge-warning { background: #fee2e2; color: #b91c1c; }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .footnote { font-size: 0.75rem; color: #6c6f78; margin-top: 20px; border-top: 1px solid #edf2f7; padding-top: 20px; line-height: 1.6; }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+        .loading { text-align: center; color: #8b5cf6; padding: 30px; animation: pulse 1.2s ease-in-out infinite; font-size: 1.1rem; }
+        .error-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 16px; padding: 16px; color: #991b1b; font-size: 0.9rem; line-height: 1.5; }
+        .debug-info { font-size: 0.75rem; color: #94a3b8; margin-top: 8px; font-family: monospace; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>AI x Web3 边界学习器 <span>miniclass</span><span class="live-badge">DeepSeek 实时</span></h1>
+    <div class="sub">输入 Web3 / AI 概念 DeepSeek 实时解释 + 链上边界判断 + 风险分析</div>
+    <div class="input-group">
+        <input type="text" id="conceptInput" placeholder="输入概念：闪电贷攻击 / 零知识证明 / MEV / ERC-4337 ..." value="闪电贷攻击">
+        <button id="askBtn">生成分析</button>
+    </div>
+    <div class="output" id="outputArea">
+        <div style="color:#6c6f78;text-align:center;">输入概念后点击按钮</div>
+    </div>
+    <div class="footnote">
+        <strong>当前模式：DeepSeek API 实时调用</strong> (非模拟规则匹配)<br>
+        模型：deepseek-chat | 每次都是真正的 AI 生成<br>
+        <strong>人工需验证：</strong>AI 输出仅供参考，钱包操作前必须人工复核
+    </div>
+</div>
+
+<script>
+const API_KEY = "sk-a490aef4cb7146508893184a09288bbc";
+const API_URL = "https://api.deepseek.com/v1/chat/completions";
+
+const SYSTEM_PROMPT = `你是一个 AI x Web3 交叉领域的教学助手。用户输入一个概念，你需要：
+1. 用通俗易懂的中文解释（2-4句话，让新手也能懂）
+2. 判断是否涉及钱包签名/链上写操作
+3. 判断是否需要人工确认
+4. 列出 2-4 条具体风险
+5. 给出人工确认建议
+
+严格按以下 JSON 输出（只输出 JSON，不要其他文字）：
+{"definition":"解释...","needWallet":true/false,"needHumanConfirm":true/false,"riskPoints":["风险1","风险2"],"humanConfirmDesc":"建议..."}
+
+判断依据：
+- 部署/转账/Swap/Mint/授权/跨链/投票执行/MEV/套利/闪电贷 needWallet=true, needHumanConfirm=true
+- 查询/读取/View/Pure函数/浏览 needWallet=false
+- AI交易机器人/自动化策略 needWallet=true, needHumanConfirm=true（私钥风险）
+- 盲签名/未知交易 needWallet=true, needHumanConfirm=true（极高风险）
+- 零知识证明/账户抽象/ERC标准/共识机制 视具体操作而定
+- 风险点要具体、有针对性，不要泛泛而谈
+- humanConfirmDesc 要说明人工在哪个环节介入`;
+
+async function callDeepSeek(concept) {
+    const resp = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + API_KEY,
+        },
+        body: JSON.stringify({
+            model: "deepseek-chat",
+            messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: concept }
+            ],
+            max_tokens: 800,
+            temperature: 0.7,
+            response_format: { type: "json_object" },
+        }),
+    });
+
+    if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error("API " + resp.status + ": " + errText.substring(0, 200));
+    }
+
+    const data = await resp.json();
+    let content = data.choices[0].message.content;
+    content = content.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(content);
+
+    return {
+        definition: parsed.definition || concept + " 是AI与Web3交叉领域的概念。",
+        needWallet: parsed.needWallet || false,
+        needHumanConfirm: parsed.needHumanConfirm || false,
+        riskPoints: parsed.riskPoints || ["请人工验证"],
+        humanConfirmDesc: parsed.humanConfirmDesc || "建议人工复核。",
+    };
+}
+
+function renderResult(concept, aiOutput) {
+    const out = document.getElementById("outputArea");
+    out.innerHTML = `
+        <div class="section">
+            <div class="label">AI 概念解释</div>
+            <div class="value">${aiOutput.definition}</div>
+        </div>
+        <div class="section">
+            <div class="label">链上边界判断</div>
+            <div class="value" style="display:flex;gap:12px;flex-wrap:wrap;">
+                ${aiOutput.needWallet ? '<span class="badge badge-warning">需要钱包签名/授权</span>' : '<span class="badge badge-success">无需签名(只读)</span>'}
+                ${aiOutput.needHumanConfirm ? '<span class="badge badge-warning">必须人工确认</span>' : '<span class="badge badge-success">建议人工确认</span>'}
+            </div>
+        </div>
+        <div class="section">
+            <div class="label">人工确认建议</div>
+            <div class="value">${aiOutput.humanConfirmDesc}</div>
+        </div>
+        <div class="section">
+            <div class="label">风险点</div>
+            <div class="value"><ul style="margin:0;padding-left:20px;">${aiOutput.riskPoints.map(r => '<li style="margin-bottom:6px;">'+r+'</li>').join('')}</ul></div>
+        </div>
+        <div class="debug-info">查询: "${concept}" | 模型: deepseek-chat | ${new Date().toLocaleTimeString()}</div>
+    `;
+}
+
+function renderError(msg) {
+    document.getElementById("outputArea").innerHTML = `
+        <div class="error-box">
+            <strong>出错</strong><br>${msg}<br><br>
+            <small>可能原因：API Key失效 / 网络不通 / DeepSeek服务繁忙 / 浏览器CORS拦截</small><br>
+            <small>打开浏览器 F12 控制台查看详细错误</small>
+        </div>
+    `;
+}
+
+async function handleAsk() {
+    const input = document.getElementById("conceptInput");
+    const btn = document.getElementById("askBtn");
+    const concept = input.value.trim() || "闪电贷攻击";
+    input.value = concept;
+
+    btn.disabled = true;
+    btn.textContent = "分析中...";
+    document.getElementById("outputArea").innerHTML = '<div class="loading">DeepSeek 正在分析: "' + concept + '"</div>';
+
+    try {
+        const result = await callDeepSeek(concept);
+        renderResult(concept, result);
+    } catch (err) {
+        console.error("Error:", err);
+        renderError(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "生成分析";
+    }
+}
+
+document.getElementById("askBtn").addEventListener("click", handleAsk);
+document.getElementById("conceptInput").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") handleAsk();
+});
+
+// 页面加载后自动运行一次
+window.addEventListener("DOMContentLoaded", function() {
+    setTimeout(handleAsk, 600);
+});
+</script>
+</body>
+</html>
