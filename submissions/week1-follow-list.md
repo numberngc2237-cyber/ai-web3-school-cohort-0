@@ -18,7 +18,7 @@
 | 3 | LXDAO | @LXDAO_Official | 研发驱动 DAO；关注公共物品、开源项目的产品化路径 |
 | 4 | Web3 Career Build | @web3careerbuild | WCB 平台；关注学习成果如何被市场认可 |
 
-### 🟠 AI × Web3 产品核心（4 个）
+### 🟠 AI × Web3 产品核心（必关注，4 个）
 
 | # | 名称 | X Handle | 为什么关注 |
 |---|------|----------|-----------|
